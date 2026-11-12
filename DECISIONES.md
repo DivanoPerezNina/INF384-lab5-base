@@ -24,6 +24,7 @@ El viernes 06/11 a las 17:55 se aplicó en producción un cambio de Terraform qu
 - No se puede saber cuántos comprobantes se descargaron ni quién lo hizo: el bucket no tenía registros de acceso. Para efectos de notificación se trata a los 41 300 como potencialmente descargados.
 - Al menos un comprobante ajeno se publicó en redes sociales el 09/11.
 - El proveedor de conciliación no tiene acceso desde el 09/11 09:25. El contrato cobra una penalidad por cada día de retraso, que sigue corriendo.
+- Penalidad contractual: S/ 15 000 por cada día sin acceso del proveedor, desde el 09/11 a las 09:25. Sigue corriendo (dato recibido a las 16:40 del 12/11).
 - Riesgo latente: `infra/s3.tf` sigue igual que en el commit `bd600fe`. Cualquier `terraform apply` revierte el bloqueo hecho a mano en la consola.
 
 ### Línea de tiempo
@@ -43,6 +44,7 @@ El viernes 06/11 a las 17:55 se aplicó en producción un cambio de Terraform qu
 | Lun 09/11 · 09:25 | El proveedor de conciliación pierde el acceso. |
 | Lun 09/11 · 11:00 | Se buscan registros de acceso al bucket: no existen. |
 | Mar 10/11 · 10:00 | Gerencia pide informe y plan de prevención. |
+| Jue 12/11 · 16:40 | El proveedor exige acceso hoy (S/ 15 000 por día sin acceso) y Gerencia pide el nombre de quien hizo el cambio. El equipo responde sin nombrar a una persona (ver A3). |
 | Jue 12/11 | El equipo agrega los jobs `iac` y `sca`, corrige `infra/s3.tf` y registra las excepciones (Parte B). |
 
 ### Causas
@@ -84,6 +86,7 @@ Ninguna de estas causas es "error humano". Son condiciones del sistema que permi
 |---|---|---|
 | Agregamos los jobs `iac` (Checkov) y `sca` (Trivy) a `ci.yml` con la política de la Decisión 1. | Desarrolladores backend | 2026-11-12 |
 | Corregimos `infra/s3.tf`: bloqueo de acceso público activo, política con el rol `conciliacion-lectura` de la cuenta 111122223333 y registros de acceso. | Desarrolladores backend | 2026-11-12 |
+| Revisamos con una segunda persona y aplicamos hoy la corrección de `infra/s3.tf` para devolver el acceso al proveedor con su rol, sin acceso público. | Líder técnico | 2026-11-12 |
 | Revisamos y aplicamos la corrección de `infra/s3.tf` para alinear producción con el código y devolver el acceso al proveedor de conciliación sin acceso público. Coordinamos con el proveedor que su rol tenga permiso `s3:GetObject` sobre el bucket. | Ingeniera de plataforma | 2026-11-16 |
 | Activamos branch protection en `main`: pull request obligatorio, una aprobación y los checks `unit`, `iac` y `sca` requeridos. | Líder técnico | 2026-11-13 |
 | Activamos el bloqueo de acceso público de S3 a nivel de cuenta y una regla de AWS Config (`s3-bucket-level-public-access-prohibited`) que alerta a on-call. | Ingeniera de plataforma | 2026-11-20 |
@@ -114,30 +117,49 @@ Ninguna de estas causas es "error humano". Son condiciones del sistema que permi
 
 ### Decisión 1 · Qué bloquea y qué informa
 
-- Decisión:
+- Decisión: bloqueamos solo los hallazgos de la misma clase que el incidente y el resto se informa en el log.
+  - **Checkov bloquea 8 checks** (`hard-fail-on` en `.checkov.yaml`): `CKV_AWS_53`, `CKV_AWS_54`, `CKV_AWS_55`, `CKV_AWS_56`, `CKV2_AWS_6` y `CKV_AWS_70` (exposición pública del bucket), `CKV_AWS_18` (sin registros de acceso no se puede medir una fuga) y `CKV_AWS_258` (Function URL sin autenticación, ver Decisión 3). Los otros 20 se informan (`soft-fail: true`).
+  - **Trivy bloquea severidad HIGH y CRITICAL**, tengan o no versión corregida. MEDIUM, LOW y UNKNOWN se informan.
 - Dato del repositorio que la sustenta:
+  - Checkov 3.4.5 sobre `infra/` del repositorio base: **28 hallazgos** (20 checks pasan, 9 recursos). En el repositorio base fallan los 8 ID bloqueantes, uno por cada ID. 6 de ellos son exactamente los que introdujo `bd600fe`.
+  - Trivy sobre `package-lock.json` del repositorio base: **5 hallazgos**. Bloquean 3 (HIGH): `CVE-2021-23337` (lodash 4.17.20, inyección de comandos en `_.template`, corregida en 4.17.21), `CVE-2026-4800` (lodash 4.17.20, inyección de código en `_.template`, corregida en 4.18.0) y `CVE-2024-29415` (ip 2.0.1, SSRF, sin versión corregida). Se informan 2 (MEDIUM): `CVE-2020-28500` (lodash, ReDoS, corregida en 4.17.21) y `CVE-2025-13465` (lodash, prototype pollution en `_.unset` y `_.omit`, corregida en 4.17.23).
+  - `src/comprobantes.js` usa `_.template`, la función afectada por las dos CVE HIGH de lodash.
 - Alternativa descartada y por qué:
-- Posición en minoría:
+  - *Bloquear todo:* deja el pipeline en rojo por 20 checks sin relación con el incidente (KMS, VPC, X-Ray, replicación, DLQ) que requieren diseño y presupuesto. Un pipeline que siempre está en rojo enseña a ignorarlo o a saltarlo, que es justo lo que falló el 06/11.
+  - *Solo informar:* es el estado que dejó pasar `bd600fe`. Un hallazgo que no detiene nada no habría evitado este incidente.
+- Posición en minoría: el abogado del diablo propuso bloquear también `CKV_AWS_288`, `CKV_AWS_289`, `CKV_AWS_290` y `CKV_AWS_355` sobre `aws_iam_role_policy.api` (`infra/iam.tf:14-26`), porque `s3:*` sobre `Resource = "*"` permite que una Lambda comprometida lea o borre todos los comprobantes, que es el mismo daño del incidente por otra puerta. El equipo lo deja en informar por ahora porque corregirlo exige inventariar qué buckets y acciones usa la API, y lo agenda como siguiente paso de la Ingeniera de plataforma.
 
 ### Decisión 2 · La vulnerabilidad sin versión corregida
 
-- Decisión:
-- Dato del repositorio que la sustenta:
+- Decisión: **reemplazamos la librería `ip`** por `net.BlockList`, que viene incluida en Node. Se eliminó `ip` de `package.json` y `package-lock.json`. El job `sca` mantiene `ignore-unfixed: false`, así que una vulnerabilidad HIGH o CRITICAL sin versión corregida sigue bloqueando; solo se deja pasar con una excepción con sus cuatro datos en `.trivyignore` y `EXCEPCIONES.md`.
+- Dato del repositorio que la sustenta: `CVE-2024-29415` (GHSA-2p57-rm9w-gvfp), librería `ip` versión `2.0.1`, sin versión corregida. Se usa en un solo lugar: `src/notificaciones.js`, función `validarUrlNotificacion`, línea 20 (`ip.isPrivate(host)`), que protege `POST /comercios/notificacion` contra SSRF. La CVE es justo una clasificación errónea de direcciones internas como públicas: `https://[::ffff:127.0.0.1]/` llega a la función como `::ffff:7f00:1` y la validación lo deja pasar.
 - Alternativa descartada y por qué:
-- Posición en minoría:
+  - *Bloquear los despliegues hasta que exista la versión corregida:* `ip` no publica versiones desde 2.0.1 (febrero de 2024). Esperar es congelar los despliegues sin fecha, incluidas las correcciones de seguridad de este mismo incidente.
+  - *Abrir una excepción:* aceptaría una SSRF explotable en un endpoint donde cualquier comercio registra la URL que quiera. No hay un control compensatorio razonable, y reemplazar la librería cuesta una función.
+- Posición en minoría: el abogado del diablo defendió una excepción de dos semanas: escribir a mano un control de seguridad bajo presión de tiempo puede introducir un hueco nuevo, y una librería mantenida (por ejemplo `ipaddr.js`) sería más confiable que código propio. El equipo respondió con pruebas unitarias de las variantes de la CVE en `test/notificaciones.test.js`, y deja como pendiente que la validación también revise la IP a la que resuelve un nombre de dominio, que ni `ip` ni el reemplazo cubren.
 
 ### Decisión 3 · La Function URL sin autenticación
 
-- Decisión:
-- Dato del repositorio que la sustenta:
-- Alternativa descartada y por qué:
-- Posición en minoría:
+- Decisión: **abrimos una excepción** (EXC-01 en `EXCEPCIONES.md` y `#checkov:skip=CKV_AWS_258` dentro del recurso). Responsable: Líder técnico. Vence: 2026-12-11. Control compensatorio: `reserved_concurrent_executions = 50` en la Lambda, y `CKV_AWS_258` sigue en `hard-fail-on` para cualquier otra Function URL. Riesgo aceptado: por 30 días cualquiera con la URL puede invocar la API sin identificarse.
+- Dato del repositorio que la sustenta: check `CKV_AWS_258` ("Ensure that Lambda function URLs AuthType is not None"), recurso `aws_lambda_function_url.api` en `infra/lambda.tf` (`authorization_type = "NONE"`). `src/handler.js` no valida identidad en ninguna ruta.
+- Alternativa descartada y por qué: *corregir ahora* (`authorization_type = "AWS_IAM"`). La app móvil consume la URL directamente y no firma con SigV4, así que el cambio deja sin servicio a todos los usuarios de la billetera. Corregirlo bien requiere poner API Gateway con autorizador JWT y publicar una nueva versión de la app, lo que no cabe en un cambio de Terraform.
+- Posición en minoría: el abogado del diablo sostuvo que hay que corregir ya, porque el riesgo aceptado es mayor que el del bucket: `/transferir` no valida identidad, así que con la URL alguien puede mover dinero entre cuentas, y el límite de concurrencia no impide eso. Pidió al menos acortar el vencimiento. El equipo mantuvo la excepción por la caída total del servicio, pero se registra que el control compensatorio es débil y que el vencimiento no se extiende.
 
 ## A3 · Dato nuevo
 
+Dato recibido (16:40): el proveedor de conciliación exige acceso hoy y cobra S/ 15 000 por cada día sin acceso. Gerencia pide el nombre de quien hizo el cambio para sancionarlo.
+
 - Qué cambia en el postmortem:
+  - Impacto: se agrega la penalidad de S/ 15 000 por día sin acceso. El proveedor está sin acceso desde el 09/11 a las 09:25, así que a hoy 12/11 van más de tres días (estimado: más de S/ 45 000; el caso no indica cómo se cuentan los días) y el costo sigue corriendo.
+  - Línea de tiempo: nueva fila del 12/11 con la exigencia del proveedor y el pedido de Gerencia.
+  - Causas: no se agrega una causa nueva. Refuerza la causa 3 (presión de plazo sin ruta de escalamiento) y el punto de "No funcionó": la contención del lunes cortó el acceso del proveedor sin un plan para restituirlo.
+  - Acciones: se agrega una acción (ver tabla de Acciones): el Líder técnico revisa y aplica hoy el cambio de `infra/s3.tf` con una segunda persona revisora, en lugar de esperar al 16/11.
 - Qué cambia en las decisiones:
+  - Ninguna de las tres decisiones cambia. La Decisión 1 (qué bloquea), la 2 (CVE sin versión corregida) y la 3 (Function URL) son sobre la política del pipeline, y la penalidad y el pedido de un nombre no las afectan.
+  - Dato del repositorio: el acceso del proveedor ya se restituye sin abrir el bucket al público. `infra/s3.tf` da `s3:GetObject` solo al rol `conciliacion-lectura` de la cuenta `111122223333` sobre `comprobantes/*`, y los cuatro bloqueos de acceso público quedan en `true`. Lo único que se mueve es la fecha de aplicar ese cambio.
 - Respuesta del equipo al pedido recibido:
+  - Sobre el acceso: no reabrimos el bucket al público ni nos saltamos el pipeline por urgencia, porque esa fue la causa del incidente. Restituimos la lectura del proveedor con su rol. El Líder técnico revisa y aplica el cambio hoy, 2026-11-12, con una segunda revisión, y coordinamos con el proveedor que su rol tenga permiso `s3:GetObject` sobre el bucket.
+  - Sobre el nombre: no entregamos el nombre de una persona. El cambio llegó a producción porque el sistema lo permitió: el commit `bd600fe` entró directo a `main` sin branch protection, el pipeline solo corría pruebas unitarias y la aprobación fue un mensaje de chat. Sancionar a una persona no cambia nada de eso y haría que el próximo incidente se oculte. Entregamos a Gerencia el plan con un rol responsable y una fecha para cada acción.
 
 ## Parte B · Evidencia
 
