@@ -1,0 +1,27 @@
+# Política de Checkov · Decisión 1 de DECISIONES.md
+#
+# Bloquea (job en rojo) solo los checks de la misma clase que el incidente:
+# exposición pública de datos y falta de trazabilidad sobre quién los leyó,
+# más la Function URL sin autenticación. Todo lo demás se informa en el log.
+#
+# Las excepciones se escriben dentro del recurso con #checkov:skip y se
+# registran con sus cuatro datos en EXCEPCIONES.md.
+
+directory:
+  - infra
+framework:
+  - terraform
+compact: true
+
+# Todo lo que no esté en hard-fail-on se informa y no rompe el job.
+soft-fail: true
+
+hard-fail-on:
+  - CKV_AWS_53   # block_public_acls
+  - CKV_AWS_54   # block_public_policy
+  - CKV_AWS_55   # ignore_public_acls
+  - CKV_AWS_56   # restrict_public_buckets
+  - CKV2_AWS_6   # el bucket tiene public access block
+  - CKV_AWS_70   # política de bucket con Principal "*"
+  - CKV_AWS_18   # registros de acceso del bucket
+  - CKV_AWS_258  # Function URL con authorization_type = NONE
