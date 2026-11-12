@@ -6,10 +6,10 @@ Número de equipo: 1
 
 | Código PUCP | Nombre | Rol | Usuario de GitHub |
 |---|---|---|---|
-| | | Moderador | vitayien |
-| 20213761 | Pablo Cesar Berrocal Laura| Escriba | Portador3 |
-| | | Abogado del diablo | RodrigoR4 |
-| | | Guardián del tiempo | 31adrianpc |
+| 20200909 | Noelia Fernandez Rebaza | Moderador | vitayien |
+| 20213761 | Pablo Cesar Berrocal Laura | Escriba | Portador3 |
+| 20210906 | Rodrigo Ernesto Roller Cachay | Abogado del diablo | RodrigoR4 |
+| 20212137 | Adrian Ronald Picoy Cotrina | Guardián del tiempo | 31adrianpc |
 | 20221481 | Divano Estefano Perez Nina | Integrador | DivanoPerezNina |
 
 ## A1 · Postmortem
