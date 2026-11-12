@@ -7,7 +7,7 @@ Número de equipo: 1
 | Código PUCP | Nombre | Rol | Usuario de GitHub |
 |---|---|---|---|
 | | | Moderador | vitayien |
-| | | Escriba | Portador3 |
+| 20213761 | Pablo Cesar Berrocal Laura| Escriba | Portador3 |
 | | | Abogado del diablo | RodrigoR4 |
 | | | Guardián del tiempo | 31adrianpc |
 | 20221481 | Divano Estefano Perez Nina | Integrador | DivanoPerezNina |
