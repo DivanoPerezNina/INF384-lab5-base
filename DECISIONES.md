@@ -165,10 +165,22 @@ Dato recibido (16:40): el proveedor de conciliación exige acceso hoy y cobra S/
 
 | Evidencia | Link |
 |---|---|
-| Run fallido: el gate detiene el bucket público | |
-| Run en verde en `main` después de las correcciones | |
-| Pull requests del equipo | |
+| Run fallido: el gate detiene el bucket público | https://github.com/DivanoPerezNina/INF384-lab5-base/actions/runs/43310238238 (PR #1: `iac` en rojo, 28 fallos, exit 1, con `infra/s3.tf` igual que en `bd600fe`). Mismo resultado en `main` tras el merge: https://github.com/DivanoPerezNina/INF384-lab5-base/actions/runs/43310675651 |
+| Run en verde en `main` después de las correcciones | https://github.com/DivanoPerezNina/INF384-lab5-base/actions/runs/43316583966 (`unit`, `iac` y `sca` en verde, después del merge del PR #5) |
+| Pull requests del equipo | https://github.com/DivanoPerezNina/INF384-lab5-base/pull/1 · https://github.com/DivanoPerezNina/INF384-lab5-base/pull/2 · https://github.com/DivanoPerezNina/INF384-lab5-base/pull/3 · https://github.com/DivanoPerezNina/INF384-lab5-base/pull/4 · https://github.com/DivanoPerezNina/INF384-lab5-base/pull/5 |
+
+### Qué implementa cada pull request
+
+| Unidad | Pull request | Decisión que implementa | Archivos |
+|---|---|---|---|
+| 1 · Job `iac` y política de Checkov | [#1](https://github.com/DivanoPerezNina/INF384-lab5-base/pull/1) · DivanoPerezNina | Decisión 1 | `.github/workflows/ci.yml`, `.checkov.yaml` |
+| 2 · Job `sca` | [#2](https://github.com/DivanoPerezNina/INF384-lab5-base/pull/2) · Portador3 | Decisiones 1 y 2 | `.github/workflows/ci.yml`, `.trivyignore` |
+| 3 · Corrección del bucket | [#3](https://github.com/DivanoPerezNina/INF384-lab5-base/pull/3) · vitayien | Decisión 1, acciones del postmortem | `infra/s3.tf`, `infra/variables.tf`, `EXCEPCIONES.md` (EXC-02) |
+| 4 · Dependencias vulnerables | [#5](https://github.com/DivanoPerezNina/INF384-lab5-base/pull/5) · RodrigoR4 | Decisiones 1 y 2 | `package.json`, `package-lock.json`, `src/notificaciones.js`, `test/notificaciones.test.js` |
+| 5 · Function URL | [#4](https://github.com/DivanoPerezNina/INF384-lab5-base/pull/4) · 31adrianpc | Decisión 3 | `infra/lambda.tf`, `EXCEPCIONES.md` (EXC-01) |
 
 ## Declaración de uso de IA
 
 Herramientas usadas y para qué se usó cada una:
+
+- Claude (Anthropic): revisión del repositorio base y del historial de commits, ejecución local de Checkov para obtener los IDs de los checks, consulta de los advisories de las dependencias, borrador de este documento y de los cambios de la Parte B (`ci.yml`, `.checkov.yaml`, `.trivyignore`, `infra/`, `src/notificaciones.js`, pruebas y `EXCEPCIONES.md`), y verificación de los conteos de Trivy en el log del run del PR #2. El equipo discutió y ajustó cada decisión, y verificó los resultados con los runs del fork.
