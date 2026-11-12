@@ -20,3 +20,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+  # Unidad 1 · Decisión 1. La política vive en .checkov.yaml:
+  # bloquea los 8 checks de hard-fail-on e informa el resto.
+  iac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar Checkov (versión fija)
+        run: pip install checkov==3.4.5
+      - name: Checkov sobre infra/
+        run: checkov --config-file .checkov.yaml
