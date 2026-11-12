@@ -6,11 +6,11 @@ Número de equipo: 1
 
 | Código PUCP | Nombre | Rol | Usuario de GitHub |
 |---|---|---|---|
-| | | Moderador | |
-| | | Escriba | |
-| | | Abogado del diablo | |
-| | | Guardián del tiempo | |
-| | | Integrador | |
+| | | Moderador | vitayien |
+| | | Escriba | Portador3 |
+| | | Abogado del diablo | RodrigoR4 |
+| | | Guardián del tiempo | 31adrianpc |
+| | | Integrador | DivanoPerezNina |
 
 ## A1 · Postmortem
 
