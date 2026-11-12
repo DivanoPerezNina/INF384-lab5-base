@@ -10,7 +10,7 @@ Número de equipo: 1
 | | | Escriba | Portador3 |
 | | | Abogado del diablo | RodrigoR4 |
 | | | Guardián del tiempo | 31adrianpc |
-| | | Integrador | DivanoPerezNina |
+| 20221481 | Divano Estefano Perez Nina | Integrador | DivanoPerezNina |
 
 ## A1 · Postmortem
 
