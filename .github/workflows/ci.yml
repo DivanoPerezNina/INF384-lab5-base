@@ -34,3 +34,35 @@ jobs:
         run: pip install checkov==3.4.5
       - name: Checkov sobre infra/
         run: checkov --config-file .checkov.yaml
+
+  # Unidad 2 · Decisiones 1 y 2. Trivy sobre package-lock.json.
+  sca:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy · informar todos los hallazgos
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: package-lock.json
+          scanners: vuln
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          format: table
+          exit-code: '0'
+
+      # Decisión 1: HIGH y CRITICAL bloquean.
+      # Decisión 2: ignore-unfixed queda en false. Una vulnerabilidad sin versión
+      # corregida también bloquea; se resuelve reemplazando la librería o con una
+      # excepción con sus cuatro datos en .trivyignore y EXCEPCIONES.md.
+      - name: Trivy · bloquear HIGH y CRITICAL
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: package-lock.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          trivyignores: .trivyignore
+          format: table
+          exit-code: '1'
