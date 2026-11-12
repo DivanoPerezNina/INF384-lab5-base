@@ -1,0 +1,11 @@
+# Excepciones de Trivy · Decisión 2 de DECISIONES.md
+#
+# Una línea por CVE. Cada CVE que se agregue aquí debe tener su entrada en
+# EXCEPCIONES.md con los cuatro datos: responsable (rol), fecha de vencimiento,
+# control compensatorio y riesgo aceptado. Formato:
+#
+#   # EXC-NN · responsable: <rol> · vence: AAAA-MM-DD
+#   CVE-AAAA-NNNNN exp:AAAA-MM-DD
+#
+# Hoy no hay excepciones: CVE-2024-29415 (ip 2.0.1) se resolvió reemplazando la
+# librería, no ignorándola.
